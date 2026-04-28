@@ -1,0 +1,10 @@
+node_modules/
+.DS_Store
+*.log
+.gemini/
+wts_bot/wts_chatbot.sqlite3
+wts_bot/db/*.sqlite3
+node_wts_bot/.next/
+node_wts_bot/node_modules/
+dist/
+build/

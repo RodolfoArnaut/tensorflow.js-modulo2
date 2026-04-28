@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora & IA de Orçamentos</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <style>
+        :root {
+            --primary: #4facfe;
+            --secondary: #00f2fe;
+            --bg: #0b0e14;
+            --accent: #f59e0b;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-image: radial-gradient(circle at 0% 0%, #1e1b4b, transparent),
+                radial-gradient(circle at 100% 100%, #1e293b, transparent);
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 2rem;
+            width: 95%;
+            max-width: 900px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 2rem;
+            border-radius: 28px;
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6);
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+
+        h2 {
+            font-size: 1rem;
+            color: #94a3b8;
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .field {
+            margin-bottom: 1.2rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-bottom: 0.4rem;
+            font-weight: 600;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 0.9rem;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: white;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        input[type="number"]:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(79, 172, 254, 0.1);
+        }
+
+        .checkbox-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 1rem;
+        }
+
+        .check-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.8rem;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: 0.2s;
+        }
+
+        .check-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .check-card input:checked+span {
+            color: var(--secondary);
+            font-weight: bold;
+        }
+
+        .btn-calc {
+            width: 100%;
+            padding: 1.1rem;
+            border: none;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            font-weight: 800;
+            cursor: pointer;
+            margin-top: 1.5rem;
+            box-shadow: 0 10px 25px rgba(79, 172, 254, 0.3);
+        }
+
+        /* CARD DE RESULTADO */
+        .result-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .price-tag {
+            font-size: 3rem;
+            font-weight: 900;
+            color: #fff;
+            margin: 1rem 0;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .tier-indicator {
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            background: rgba(79, 172, 254, 0.1);
+            color: var(--primary);
+            border: 1px solid rgba(79, 172, 254, 0.2);
+            display: inline-block;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .accent {
+            color: var(--accent);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <!-- Painel de Configuração -->
+        <div class="glass">
+            <h1>Configuração</h1>
+
+            <div class="field">
+                <label>Usuários (R$ 39,90/un)</label>
+                <input type="number" id="usuarios" value="2" oninput="calculate()">
+            </div>
+
+            <div class="field">
+                <label>Canais (R$ 169,90/un)</label>
+                <input type="number" id="canais" value="1" oninput="calculate()">
+            </div>
+
+            <h2>Recursos Adicionais</h2>
+            <div class="checkbox-row">
+                <label class="check-card">
+                    <input type="checkbox" id="iagen" onchange="calculate()">
+                    <span>IA Gen (R$ 300)</span>
+                </label>
+                <label class="check-card">
+                    <input type="checkbox" id="transcription" onchange="calculate()">
+                    <span>Áudio (R$ 6,90/u)</span>
+                </label>
+                <label class="check-card">
+                    <input type="checkbox" id="asaas" onchange="calculate()">
+                    <span>Ref. ASAAS (R$ 99,9)</span>
+                </label>
+            </div>
+
+            <button class="btn-calc" id="btnPredict" disabled>Treinando IA...</button>
+        </div>
+
+        <!-- Painel de Resultado -->
+        <div class="glass result-card">
+            <div>
+                <h2>Orçamento Estimado</h2>
+                <div class="price-tag" id="totalPrice">R$ 0,00</div>
+                <div class="tier-indicator" id="tierName">ANALISANDO PERFIL...</div>
+            </div>
+
+            <div id="details" style="margin-top: 2rem;">
+                <div class="summary-item"><span>Base Usuários</span> <span id="costUsers">R$ 0,00</span></div>
+                <div class="summary-item"><span>Canais Ativos</span> <span id="costChannels">R$ 0,00</span></div>
+                <div class="summary-item"><span>IA & Plugins</span> <span id="costPlugins">R$ 0,00</span></div>
+                <div class="summary-item" style="border:none; margin-top:10px; font-weight:bold;">
+                    <span class="accent">Confiança da IA</span> <span id="prob" class="accent">0%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let model;
+        const categories = ["Basic", "Medium", "Premium"];
+
+        // Configuração da IA (TensorFlow)
+        async function setupIA() {
+            model = tf.sequential();
+            model.add(tf.layers.dense({ inputShape: [3], units: 16, activation: 'relu' }));
+            model.add(tf.layers.dense({ units: 8, activation: 'relu' }));
+            model.add(tf.layers.dense({ units: 3, activation: 'softmax' }));
+            model.compile({ optimizer: tf.train.adam(0.01), loss: 'categoricalCrossentropy' });
+
+            // Treinando com pesos: Canais(High), Users(Low), IA(High)
+            const trainX = tf.tensor2d([
+                [0.1, 0.1, 0], [0.4, 0.2, 0], [0.2, 0.5, 0], [0.8, 0.4, 0],
+                [0.3, 0.8, 0], [0.1, 0.4, 1], [0.9, 0.9, 1], [0.05, 0.1, 0]
+            ]);
+            const trainY = tf.tensor2d([
+                [1, 0, 0], [1, 0, 0], [0, 1, 0], [0, 1, 0],
+                [0, 0, 1], [0, 0, 1], [0, 0, 1], [1, 0, 0]
+            ]);
+
+            await model.fit(trainX, trainY, { epochs: 200 });
+            document.getElementById('btnPredict').disabled = false;
+            document.getElementById('btnPredict').innerText = "Recalcular Perfil IA";
+            calculate();
+        }
+
+        // Lógica da Calculadora
+        function calculate() {
+            const u = parseInt(document.getElementById('usuarios').value) || 0;
+            const c = parseInt(document.getElementById('canais').value) || 0;
+            const hasIA = document.getElementById('iagen').checked;
+            const hasTrans = document.getElementById('transcription').checked;
+            const hasAsaas = document.getElementById('asaas').checked;
+
+            // Preços do Usuário
+            const costU = u * 39.90;
+            const costC = c * 169.90;
+
+            let costP = 0;
+            if (hasIA) costP += 300;
+            if (hasTrans) costP += (u * 6.90);
+            if (hasAsaas) costP += 99.90;
+
+            const total = costU + costC + costP;
+
+            // Atualiza UI da Calculadora
+            document.getElementById('totalPrice').innerText = total.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' });
+            document.getElementById('costUsers').innerText = costU.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' });
+            document.getElementById('costChannels').innerText = costC.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' });
+            document.getElementById('costPlugins').innerText = costP.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' });
+
+            predictTier(u, c, hasIA);
+        }
+
+        // Lógica da IA
+        async function predictTier(uRaw, cRaw, hasIA) {
+            if (!model) return;
+
+            const u = Math.min(uRaw / 100, 1);
+            const c = Math.min(cRaw / 20, 1);
+            const ia = hasIA ? 1 : 0;
+
+            const pred = model.predict(tf.tensor2d([[u, c, ia]]));
+            const res = await pred.array();
+            const probs = res[0];
+            const maxIdx = probs.indexOf(Math.max(...probs));
+
+            document.getElementById('tierName').innerText = `PERFIL RECOMENDADO: ${categories[maxIdx]}`;
+            document.getElementById('prob').innerText = `${(probs[maxIdx] * 100).toFixed(1)}%`;
+        }
+
+        document.getElementById('btnPredict').onclick = calculate;
+        setupIA();
+    </script>
+
+</body>
+
+</html>
